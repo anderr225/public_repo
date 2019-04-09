@@ -1,0 +1,32 @@
+version: '3.4'
+
+networks:
+  docker_test_cft-dev:
+    driver: bridge
+    
+services:
+  dockerapi:
+    image: docker_test_cft:latest
+    depends_on:
+      - "postgres_image"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    environment:
+      DB_CONNECTION_STRING: "Host=postgres_image;Port=5432;Database=cftdb;Username=postgres;Password=profff978797"
+    networks:
+      - docker_test_cft-dev
+        
+  postgres_image:
+    image: postgres:latest
+    ports:
+      - "5432"
+    restart: always
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "profff978797"
+      POSTGRES_DB: "cftdb"
+    networks:
+      - docker_test_cft-dev
