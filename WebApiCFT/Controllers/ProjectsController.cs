@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using ThreadingTask = System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiCFT.Models;
@@ -19,7 +19,7 @@ namespace WebApiCFT.Controllers
         
         // GET api/projects
         [HttpGet]
-        public ActionResult<IEnumerable<Project>> Get([FromQuery]FilterModelBase<Project> filter)
+        public async ThreadingTask.Task<ActionResult<IEnumerable<Project>>> Get([FromQuery]FilterModelBase<Project> filter)
         {
             if (!filter.IsValid(out var errorMessage))
             {
@@ -28,15 +28,21 @@ namespace WebApiCFT.Controllers
             
             //get data only from the specified page
             var pagedProject = filter.Filter(_context.Projects);
-            
-            return pagedProject.ToList();
+            if (await pagedProject.AnyAsync())
+            {
+                return await pagedProject.ToListAsync();                
+            }
+            else
+            {
+                return NotFound();
+            }
         }
 
         // GET api/projects/{id}
         [HttpGet("{id}")]
-        public ActionResult<Project> Get(int id)
+        public async ThreadingTask.Task<ActionResult<Project>> Get(int id)
         {
-            var project = _context.Projects.Find(id);
+            var project = await _context.Projects.FindAsync(id);
             if (project == null)
             {
                 return NotFound();
@@ -47,44 +53,54 @@ namespace WebApiCFT.Controllers
 
         // POST api/projects
         [HttpPost]
-        public ActionResult<Project> Post([FromBody] Project project)
+        public async ThreadingTask.Task<ActionResult<Project>> Post([FromBody] Project project)
         {
             if (project.Id != 0)
             {
                 return BadRequest(new { message = "You should not pass 'id' in post request"});
             }
             
+            //checking of uniqueness
+            if (await _context.Projects.AnyAsync(p => p.Name == project.Name))
+            {
+                return BadRequest(new { message = "Name should be unique. Project with the same name already exists"});
+            }
+
             //set the creation time
             project.CreationTime = DateTime.Now;
             project.LastModificationTime = DateTime.Now;
             
-            _context.Projects.Add(project);
-            _context.SaveChanges();
+            await _context.Projects.AddAsync(project);
+            await _context.SaveChangesAsync();
             
             return CreatedAtAction("GET", new Project(){Id = project.Id}, project);
         }
 
         // PUT api/projects/{id}
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Project project)
+        public async ThreadingTask.Task<IActionResult> Put(int id, [FromBody] Project project)
         {
             if (id != project.Id)
             {
                 return BadRequest(new { message = "Id in the query and id in the body are different"});
             }
 
-            var entry = _context.Projects.Find(id);
+            var entry = await _context.Projects.FindAsync(id);
             if (entry != null)
             {
-                //user is not allowed to change the creation time
-                if (project.CreationTime != entry.CreationTime)
+                //if user changed the name, we should check uniqueness of new name
+                if (entry.Name != project.Name && await _context.Projects.AnyAsync(p => p.Name == project.Name))
                 {
-                    project.CreationTime = entry.CreationTime;
+                    return BadRequest(new { message = "This name is already taken"});
                 }
-                project.LastModificationTime = DateTime.Now;
                 
-                _context.Entry(project).State = EntityState.Modified;
-                _context.SaveChanges();
+                //updating
+                entry.LastModificationTime = DateTime.Now;
+                entry.Name = project.Name;
+                entry.Description = project.Description;
+
+                _context.Entry(entry).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
                 return NoContent();
             }
             else//no project with the same id
@@ -95,18 +111,18 @@ namespace WebApiCFT.Controllers
 
         // DELETE api/projects/{id}
         [HttpDelete("{id}")]
-        public ActionResult<Project> Delete(int id)
+        public async ThreadingTask.Task<IActionResult> Delete(int id)
         {
-            var project = _context.Projects.Find(id);
+            var project = await _context.Projects.FindAsync(id);
             if (project == null)
             {
                 return NotFound();
             }
 
             _context.Projects.Remove(project);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
-            return project;
+            return NoContent();
         }
     }
 }

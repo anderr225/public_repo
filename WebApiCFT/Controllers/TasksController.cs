@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiCFT.Models;
+using ThreadingTask = System.Threading.Tasks;
 
 namespace WebApiCFT.Controllers
 {
@@ -17,7 +18,7 @@ namespace WebApiCFT.Controllers
         
         // GET api/tasks
         [HttpGet]
-        public ActionResult<IEnumerable<Task>> Get([FromQuery]FilterModelTask filter)
+        public async ThreadingTask.Task<ActionResult<IEnumerable<Task>>> Get([FromQuery]FilterModelTask filter)
         {
             if (!filter.IsValid(out var errorMessage))
             {
@@ -26,15 +27,21 @@ namespace WebApiCFT.Controllers
             
             //get filtered data 
             var tasks = filter.Filter(_context.Tasks);
-            
-            return tasks.ToList();
+            if (await tasks.AnyAsync())
+            {
+                return await tasks.ToListAsync();                
+            }
+            else
+            {
+                return NotFound();
+            }
         }
 
         // GET api/tasks/{id}
         [HttpGet("{id}")]
-        public ActionResult<Task> Get(int id)
+        public async ThreadingTask.Task<ActionResult<Task>> Get(int id)
         {
-            var task = _context.Tasks.Find(id);
+            var task = await _context.Tasks.FindAsync(id);
             if (task == null)
             {
                 NotFound();
@@ -45,17 +52,22 @@ namespace WebApiCFT.Controllers
 
         // POST api/tasks
         [HttpPost]
-        public ActionResult<Task> Post([FromBody] Task task)
+        public async ThreadingTask.Task<ActionResult<Task>> Post([FromBody] Task task)
         {
             if (task.Id != 0)
             {
                 return BadRequest(new { message = "You should not pass 'id' in post request"});
             }
             
-            var proj = _context.Projects.Find(task.ProjectId);
+            var proj = await _context.Projects.FindAsync(task.ProjectId);
             if (proj == null)
             {
                 return BadRequest(new { message = "There is no project with such id"});
+            }
+            
+            if (await _context.Tasks.AnyAsync(t => t.ProjectId == task.ProjectId && t.Name == task.Name))
+            {
+                return BadRequest(new { message = "This project already has task with the same name"});
             }
             
             //set status and creation time
@@ -63,41 +75,56 @@ namespace WebApiCFT.Controllers
             task.LastModificationTime = DateTime.Now;
             task.Status = Status.New;
             
-            _context.Tasks.Add(task);
-            _context.SaveChanges();
+            await _context.Tasks.AddAsync(task);
+            await _context.SaveChangesAsync();
             
-            return CreatedAtAction("GET", new Task(){Id = task.Id}, task);
+            return CreatedAtAction("GET", new Task{Id = task.Id}, task);
         }
 
         // PUT api/tasks/{id}
         [HttpPut("{id}")]
-        public ActionResult Put(int id, [FromBody] Task task)
+        public async ThreadingTask.Task<ActionResult> Put(int id, [FromBody] Task task)
         {
             if (id != task.Id)
             {
                 return BadRequest();
             }
 
-            var entry = _context.Tasks.Find(id);
+            var entry = await _context.Tasks.FindAsync(id);
             if (entry != null)
             {
                 //status checking
-                if (task.Status == Status.Closed)
+                if (entry.Status == Status.Closed)
                 {
                     return BadRequest(new { message = "You can't change the task with 'CLOSED' status"});
                 }
-                
-                //user is not allowed to change the creation time
-                if (task.CreationTime != entry.CreationTime)
-                {
-                    task.CreationTime = entry.CreationTime;
-                }
-                task.LastModificationTime = DateTime.Now;
 
-                _context.Entry(task).State = EntityState.Modified;
-                _context.SaveChanges();
+                if (! await _context.Projects.AnyAsync(p => p.Id == task.ProjectId))
+                {
+                    return BadRequest(new { message = "No project with such id"});
+                }
+                
+                //if unique pair has changed
+                if (task.ProjectId != entry.ProjectId || task.Name != entry.Name)
+                {
+                    if (await _context.Tasks.AnyAsync(p => p.Name == task.Name && p.ProjectId == task.ProjectId))
+                    {
+                        return BadRequest(new { message = "This project already has task with the same name"});
+                    }
+                }
+
+                //update
+                entry.Status = task.Status;
+                entry.Name = task.Name;
+                entry.Description = task.Description;
+                entry.ProjectId = task.ProjectId;
+                entry.Priority = task.Priority;
+                entry.LastModificationTime = DateTime.Now;
+
+                _context.Entry(entry).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                
                 return NoContent();
-            
             }
             else //didn't find any task with such id
             {
@@ -107,16 +134,16 @@ namespace WebApiCFT.Controllers
 
         // DELETE api/tasks/{id}
         [HttpDelete("{id}")]
-        public ActionResult<Task> Delete(int id)
+        public async ThreadingTask.Task<ActionResult<Task>> Delete(int id)
         {
-            var task = _context.Tasks.Find(id);
+            var task = await _context.Tasks.FindAsync(id);
             if (task == null)
             {
                 return NotFound();
             }
 
             _context.Tasks.Remove(task);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return task;
         }

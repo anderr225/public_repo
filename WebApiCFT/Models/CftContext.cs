@@ -1,4 +1,5 @@
 using System;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.EntityFrameworkCore;
 
 namespace WebApiCFT.Models
@@ -18,28 +19,13 @@ namespace WebApiCFT.Models
             modelBuilder.Entity<Task>().HasOne<Project>()
                 .WithMany()
                 .HasForeignKey(c => c.ProjectId);
+            
+            //unique name of task for every project
+            modelBuilder.Entity<Task>()
+                .HasIndex(p => new {p.Name, p.ProjectId}).IsUnique();
 
-//            modelBuilder.Entity<Project>().HasData(
-//                new Project()
-//                {
-//                    Name = "Default_project_name",
-//                    Description = "Default_project_description",
-//                    CreationTime = DateTime.Now,
-//                    LastModificationTime = DateTime.Now,
-//                    Id = 1
-//                });
-//            modelBuilder.Entity<Task>().HasData(
-//                new Task()
-//                {
-//                    Name = "Default_task_name",
-//                    Description = "Default_task_description",
-//                    CreationTime = DateTime.Now,
-//                    LastModificationTime = DateTime.Now,
-//                    Priority = 1,
-//                    ProjectId = 1,
-//                    Status = Status.New,
-//                    Id = 1
-//                });
-        }
+            modelBuilder.Entity<Project>()
+                .HasIndex(p => p.Name).IsUnique();
+        }   
     }
 }

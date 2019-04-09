@@ -30,11 +30,11 @@ namespace WebApiCFT
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {     
-            //get connection string for db from environment
+//            get connection string for db from environment
             var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
             if (string.IsNullOrEmpty(connectionString))
             {
-                connectionString = "Host=localhost;Port=5432;Database=cftdb;Username=postgres;Password=profff978797";
+                connectionString = Configuration.GetConnectionString("DEFAULTCONNECTION");
             }
             
             services.AddEntityFrameworkNpgsql()

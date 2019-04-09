@@ -90,6 +90,7 @@ namespace WebApiCFT.Models
             
             //sorting and pagination
             return base.Filter(this.Sort(tasks));
+                
         }
 
         private IQueryable<Task> Sort(IQueryable<Task> tasks)
@@ -97,7 +98,7 @@ namespace WebApiCFT.Models
             //if user didn't pass 'SortBy' string, we don't need to sort
             if (String.IsNullOrEmpty(SortBy))
             {
-                return tasks;
+                return tasks.OrderBy(x => x.Id);
             }
 
             IQueryable<Task> tmp;
@@ -122,7 +123,7 @@ namespace WebApiCFT.Models
                     tmp = tasks.OrderByDescending(p => p.Priority);
                     break;
                 default:
-                    tmp = tasks;
+                    tmp = tasks.OrderBy(p => p.Id);
                     break;
             }
 

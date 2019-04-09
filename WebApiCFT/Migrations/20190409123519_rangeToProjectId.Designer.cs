@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WebApiCFT.Models;
@@ -9,9 +10,10 @@ using WebApiCFT.Models;
 namespace WebApiCFT.Migrations
 {
     [DbContext(typeof(CftContext))]
-    partial class CftContextModelSnapshot : ModelSnapshot
+    [Migration("20190409123519_rangeToProjectId")]
+    partial class rangeToProjectId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
