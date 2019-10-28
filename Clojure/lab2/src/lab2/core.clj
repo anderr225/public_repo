@@ -4,8 +4,7 @@
   [f l r]
   (* (- r l)(/ (+ (f l) (f r)) 2)))
 
-(defn inner_memoized_integral
-  []
+(defn inner_memoized_integral []
   (let 
     [inner_integral
      (fn [mem_integral f l r h]
@@ -22,11 +21,13 @@
 (defn calculate_mem_integral
   [f x]
   (if (>= x 0) 
-    (
-      let [h 0.05 border (* h (int (/ x h)))] 
+    (let [h 0.05
+          border (* h (int (/ x h)))] 
       (+ ((inner_memoized_integral) f 0 border h) 
-         (get_trapezoid_area f border x))
-      )
+         (get_trapezoid_area f border x)))
     (throw (IllegalArgumentException. "x should be > 0"))))
 
-(calculate_mem_integral (fn [x] (* x x)) 2)
+(defn get_integral_fn [f]
+  (fn [x] (calculate_mem_integral f x)))
+
+((get_integral_fn (fn [x] (* x x))) 2)
