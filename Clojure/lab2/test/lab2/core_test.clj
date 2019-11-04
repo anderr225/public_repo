@@ -4,16 +4,9 @@
 
 (deftest get_trapezoid_area_test
   (testing
-    (is (= 6 (get_trapezoid_area (fn [x] x) 2 4)))))
+    (is (= 6 (get_trapezoid_area (fn [x] x) 2 4)))
+    (is (= 50 (get_trapezoid_area (fn [x] x) 0 10)))))
 
-(deftest get_integral_fn_test
+(deftest make_integral_test
   (testing
-    (is (= 50 (int ((get_integral_fn (fn [x] x)) 10))))))
-
-(deftest calculate_mem_integral_test
-  (testing
-    (is (= 2 (int (calculate_mem_integral (fn [x] x) 2))))))
-
-(deftest inner_memoized_integral_test
-  (testing
-    (is (= 2 (int ((inner_memoized_integral) (fn [x] x) 0 2 0.05))))))
+    (is (= 333 (int ((make_integral (fn [x] (* x x))) 10))))))
